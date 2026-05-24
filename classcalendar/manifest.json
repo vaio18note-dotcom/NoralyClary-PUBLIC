@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "CLASS Calendar LETUS++",
+  "version": "1.0",
+  "description": "CLASSの時間割をGoogleカレンダーに登録する",
+  "permissions": ["storage", "tabs", "identity", "scripting"],
+  "host_permissions": [
+    "https://class.admin.tus.ac.jp/*",
+    "https://www.googleapis.com/calendar/v3/*"
+  ],
+  "oauth2": {
+    "client_id": "337364291153-9gngmql8guhk9mjflr0i4u1up8iovoi7.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/calendar.events"]
+  },
+  "icons": {
+    "128": "128pxcc.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "128pxcc.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://class.admin.tus.ac.jp/uprx/up/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>CLASS カレンダー登録</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>CLASS → Googleカレンダー</h1>
+  </header>
+
+  <div id="status" class="status"></div>
+
+  <section class="date-section">
+    <label>学期開始日<input type="date" id="startDate"></label>
+    <label>学期終了日<input type="date" id="endDate"></label>
+  </section>
+
+  <div class="action-row">
+    <button id="scrapeBtn">📋 時間割を取得</button>
+    <button id="loginBtn">🔑 Googleログイン</button>
+  </div>
+
+  <div id="courseList"></div>
+
+  <div class="bulk-area" id="bulkArea" style="display:none">
+    <div class="bulk-row">
+      <button id="bulkDlBtn"  class="bulk-dl">💾 月〜金を一括DL</button>
+      <button id="bulkRegBtn" class="bulk-reg">📅 月〜金を一括登録</button>
+    </div>
+    <p class="bulk-hint">DL → Googleカレンダー設定 → インポート</p>
+    <div class="bulk-row" style="margin-top:8px">
+      <button id="deleteBtn" class="bulk-delete">🗑 登録済み予定を削除</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
