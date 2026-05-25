@@ -4,8 +4,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
   font-size: 13px;
   width: 380px;
+  height: 580px;
   color: #202124;
   background: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
 header {
@@ -72,7 +75,8 @@ button:disabled { opacity: 0.45; cursor: default; }
 
 /* ---- 授業リスト ---- */
 #courseList {
-  max-height: 320px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 4px 14px;
 }
@@ -132,6 +136,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .bulk-area {
   padding: 10px 14px;
   border-top: 1px solid #e0e0e0;
+  flex-shrink: 0;
 }
 .bulk-row {
   display: flex;
