@@ -1,12 +1,12 @@
 ---
 ---
-# プライバシーポリシー — CLASS Calendar LETUS++
+# プライバシーポリシー — CLASS Calendar
 
 最終更新日: 2026年5月26日
 
 ## 概要
 
-CLASS Calendar LETUS++ は、東京理科大学の CLASS ポータルから時間割を取得し、Google カレンダーに登録する Chrome 拡張機能です。
+CLASS Calendar  は、東京理科大学の CLASS ポータルから時間割を取得し、Google カレンダーに登録する Chrome 拡張機能です。
 
 ## 取り扱うデータについて
 

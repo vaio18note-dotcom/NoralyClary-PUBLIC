@@ -159,7 +159,7 @@ function generateICS(targets, dates) {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//CLASS Calendar LETUS++//JA',
+    'PRODID:-//CLASS Calendar //JA',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VTIMEZONE',

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CLASS Calendar LETUS++",
+  "name": "Class Calendar",
   "version": "1.0",
   "description": "CLASSの時間割をGoogleカレンダーに登録する",
   "permissions": ["storage", "tabs", "identity", "scripting"],
