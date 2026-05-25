@@ -34,7 +34,12 @@ document.getElementById('endDate').addEventListener('change', e =>
 document.getElementById('scrapeBtn').addEventListener('click', tryScrape);
 document.getElementById('loginBtn').addEventListener('click', authenticate);
 document.getElementById('bulkDlBtn').addEventListener('click', () => bulkAction('dl'));
-document.getElementById('bulkRegBtn').addEventListener('click', () => bulkAction('reg'));
+document.getElementById('bulkRegBtn').addEventListener('click', () => {
+  const btn = document.getElementById('bulkRegBtn');
+  btn.disabled = true;
+  setTimeout(() => { btn.disabled = false; }, 500);
+  bulkAction('reg');
+});
 document.getElementById('deleteBtn').addEventListener('click', deleteRegistered);
 
 // ---- スクレイピング ----
@@ -183,7 +188,7 @@ function downloadICS(icsContent, filename) {
 function buildGCalEvent(course, dates) {
   const { period, day, name, room } = course;
 
-  const EXT = { extendedProperties: { private: { source: 'classcalendar-letus' } } };
+  const EXT = { extendedProperties: { private: { source: 'classcalendar-letus', courseCode: course.courseCode || '' } } };
 
   if (day === 6) {
     const firstDate = firstOccurrence(dates.start, 6);
@@ -213,6 +218,25 @@ function buildGCalEvent(course, dates) {
   };
 }
 
+async function runConcurrent(items, fn, onProgress, limit = 5) {
+  const results = new Array(items.length);
+  let next = 0, done = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      try {
+        results[i] = { ok: true, value: await fn(items[i]) };
+      } catch (e) {
+        results[i] = { ok: false, error: e };
+      }
+      done++;
+      onProgress(done, items.length);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 async function postToCalendar(course, dates) {
   const res = await fetch(CALENDAR_API, {
     method: 'POST',
@@ -225,9 +249,50 @@ async function postToCalendar(course, dates) {
   }
 }
 
+// ---- 登録確認（個別）----
+
+let _regBtn           = null;
+let _regCancelHandler = null;
+let _regPendingCourse = null;
+let _regPendingDates  = null;
+
+function resetRegConfirm(msg) {
+  if (_regCancelHandler) {
+    document.removeEventListener('click', _regCancelHandler, true);
+    _regCancelHandler = null;
+  }
+  if (_regBtn) {
+    _regBtn.textContent = '📅';
+    _regBtn.classList.remove('confirm');
+    _regBtn = null;
+  }
+  _regPendingCourse = null;
+  _regPendingDates  = null;
+  if (msg) showStatus(msg, 'warn');
+}
+
+// ---- 登録確認（一括）----
+
+let _bulkRegCancelHandler = null;
+let _bulkRegTargets       = null;
+let _bulkRegDates         = null;
+
+function resetBulkRegConfirm(msg) {
+  if (_bulkRegCancelHandler) {
+    document.removeEventListener('click', _bulkRegCancelHandler, true);
+    _bulkRegCancelHandler = null;
+  }
+  _bulkRegTargets = null;
+  _bulkRegDates   = null;
+  const btn = document.getElementById('bulkRegBtn');
+  btn.textContent = '📅 月〜金を一括登録';
+  btn.classList.remove('confirm');
+  if (msg) showStatus(msg, 'warn');
+}
+
 // ---- アクション ----
 
-async function courseAction(course, mode) {
+async function courseAction(course, mode, btn = null) {
   const dates = getDateRange();
   if (!dates) return;
 
@@ -243,14 +308,57 @@ async function courseAction(course, mode) {
     return;
   }
 
-  // 直接登録
+  // reg モード
   if (!accessToken) { showStatus('先にGoogleにログインしてください', 'warn'); return; }
-  try {
-    await postToCalendar(course, dates);
-    showStatus(`「${course.name}」を登録しました ✓`, 'ok');
-  } catch (e) {
-    showStatus(`登録失敗: ${e.message}`, 'error');
+
+  // 2回目クリック → 登録実行
+  if (_regBtn === btn) {
+    const c = _regPendingCourse, d = _regPendingDates;
+    resetRegConfirm(null);
+    try {
+      await postToCalendar(c, d);
+      showStatus(`「${c.name}」を登録しました ✓`, 'ok');
+    } catch (e) {
+      showStatus(`登録失敗: ${e.message}`, 'error');
+    }
+    return;
   }
+
+  // 別ボタンがconfirm中なら先にリセット
+  resetRegConfirm(null);
+
+  // 重複チェック
+  showStatus('確認中…', 'ok');
+  let dupCount;
+  try {
+    dupCount = (await fetchRegisteredIds(dates, course.courseCode)).length;
+  } catch (e) {
+    showStatus('確認失敗: ' + e.message, 'error');
+    return;
+  }
+
+  if (dupCount === 0) {
+    try {
+      await postToCalendar(course, dates);
+      showStatus(`「${course.name}」を登録しました ✓`, 'ok');
+    } catch (e) {
+      showStatus(`登録失敗: ${e.message}`, 'error');
+    }
+    return;
+  }
+
+  // 重複あり → 確認待ち
+  _regBtn           = btn;
+  _regPendingCourse = course;
+  _regPendingDates  = dates;
+  btn.textContent = `⚠${dupCount}`;
+  btn.classList.add('confirm');
+  showStatus(`${dupCount}件重複する予定があります。もう一度押して続行`, 'warn');
+
+  _regCancelHandler = e => {
+    if (e.target !== btn) resetRegConfirm('キャンセルしました');
+  };
+  setTimeout(() => document.addEventListener('click', _regCancelHandler, true), 0);
 }
 
 async function bulkAction(mode) {
@@ -265,30 +373,105 @@ async function bulkAction(mode) {
     return;
   }
 
-  // 直接一括登録
+  // reg モード
   if (!accessToken) { showStatus('先にGoogleにログインしてください', 'warn'); return; }
-  let success = 0;
-  let firstError = null;
-  for (const course of targets) {
-    try {
-      await postToCalendar(course, dates);
-      success++;
-      showStatus(`${success} / ${targets.length} 件登録中…`, 'ok');
-    } catch (e) {
-      if (!firstError) firstError = e.message;
+
+  const bulkRegBtn = document.getElementById('bulkRegBtn');
+
+  // 2回目クリック → 登録実行
+  if (_bulkRegCancelHandler) {
+    const ts = _bulkRegTargets, d = _bulkRegDates;
+    resetBulkRegConfirm(null);
+    const results = await runConcurrent(
+      ts,
+      course => postToCalendar(course, d),
+      (done, total) => showStatus(`${done} / ${total} 件登録中…`, 'ok')
+    );
+    const success = results.filter(r => r.ok).length;
+    const firstError = results.find(r => !r.ok)?.error?.message;
+    if (success === 0 && firstError) {
+      showStatus(`登録失敗: ${firstError}`, 'error');
+    } else {
+      showStatus(`完了: ${success} / ${ts.length} 件登録しました`, success === ts.length ? 'ok' : 'warn');
     }
+    return;
   }
-  if (success === 0 && firstError) {
-    showStatus(`登録失敗: ${firstError}`, 'error');
-  } else {
-    showStatus(`完了: ${success} / ${targets.length} 件登録しました`, success === targets.length ? 'ok' : 'warn');
+
+  // 重複チェック（1回のAPIで全件確認）
+  showStatus('確認中…', 'ok');
+  let existingCodes;
+  try {
+    existingCodes = await fetchExistingCourseCodes(dates);
+  } catch (e) {
+    showStatus('確認失敗: ' + e.message, 'error');
+    return;
   }
+
+  const dupCount = targets.filter(c => c.courseCode && existingCodes.has(c.courseCode)).length;
+
+  if (dupCount === 0) {
+    const results = await runConcurrent(
+      targets,
+      course => postToCalendar(course, dates),
+      (done, total) => showStatus(`${done} / ${total} 件登録中…`, 'ok')
+    );
+    const success = results.filter(r => r.ok).length;
+    const firstError = results.find(r => !r.ok)?.error?.message;
+    if (success === 0 && firstError) {
+      showStatus(`登録失敗: ${firstError}`, 'error');
+    } else {
+      showStatus(`完了: ${success} / ${targets.length} 件登録しました`, success === targets.length ? 'ok' : 'warn');
+    }
+    return;
+  }
+
+  // 重複あり → 確認待ち
+  _bulkRegTargets = targets;
+  _bulkRegDates   = dates;
+  bulkRegBtn.textContent = `⚠ ${dupCount}件重複 もう一度押して続行`;
+  bulkRegBtn.classList.add('confirm');
+  showStatus(`${dupCount}件重複する予定があります。もう一度押して続行`, 'warn');
+
+  _bulkRegCancelHandler = e => {
+    if (e.target !== bulkRegBtn) resetBulkRegConfirm('キャンセルしました');
+  };
+  setTimeout(() => document.addEventListener('click', _bulkRegCancelHandler, true), 0);
 }
 
 // ---- 削除 ----
 
-let _deleteTimer = null;
-let _deleteIds   = [];
+let _deleteIds          = [];
+let _deleteCancelHandler = null;
+
+function resetBulkDelete(msg) {
+  if (_deleteCancelHandler) {
+    document.removeEventListener('click', _deleteCancelHandler, true);
+    _deleteCancelHandler = null;
+  }
+  _deleteIds = [];
+  const btn = document.getElementById('deleteBtn');
+  btn.textContent = '🗑 登録済み予定を削除';
+  btn.classList.remove('confirm');
+  if (msg) showStatus(msg, 'warn');
+}
+
+let _courseDeleteIds          = [];
+let _courseDeleteBtn          = null;
+let _courseDeleteCancelHandler = null;
+
+function resetCourseDelete(msg) {
+  if (_courseDeleteCancelHandler) {
+    document.removeEventListener('click', _courseDeleteCancelHandler, true);
+    _courseDeleteCancelHandler = null;
+  }
+  _courseDeleteIds = [];
+  if (_courseDeleteBtn) {
+    _courseDeleteBtn.textContent = '🗑';
+    _courseDeleteBtn.classList.remove('confirm');
+    _courseDeleteBtn = null;
+  }
+  if (msg) showStatus(msg, 'warn');
+}
 
 async function deleteRegistered() {
   if (!accessToken) { showStatus('先にGoogleにログインしてください', 'warn'); return; }
@@ -297,27 +480,16 @@ async function deleteRegistered() {
 
   const btn = document.getElementById('deleteBtn');
 
-  if (_deleteTimer) {
-    clearTimeout(_deleteTimer);
-    _deleteTimer = null;
-    let deleted = 0;
-    for (const id of _deleteIds) {
-      try {
-        const res = await fetch(`${CALENDAR_API}/${id}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (res.ok || res.status === 204 || res.status === 410) deleted++;
-        showStatus(`${deleted} / ${_deleteIds.length} 件削除中…`, 'ok');
-      } catch (e) { /* ignore */ }
-    }
-    _deleteIds = [];
-    btn.textContent = '🗑 登録済み予定を削除';
-    btn.classList.remove('confirm');
+  // 2回目クリック → 確定削除
+  if (_deleteCancelHandler) {
+    const ids = _deleteIds;
+    resetBulkDelete(null);
+    const deleted = await bulkDeleteIds(ids);
     showStatus(`${deleted}件の予定を削除しました`, 'ok');
     return;
   }
 
+  // 1回目クリック → 件数検索
   showStatus('検索中…', 'ok');
   try {
     _deleteIds = await fetchRegisteredIds(dates);
@@ -333,17 +505,31 @@ async function deleteRegistered() {
 
   btn.textContent = `⚠ ${_deleteIds.length}件削除 もう一度押して確定`;
   btn.classList.add('confirm');
-  _deleteTimer = setTimeout(() => {
-    _deleteTimer = null;
-    _deleteIds = [];
-    btn.textContent = '🗑 登録済み予定を削除';
-    btn.classList.remove('confirm');
-    showStatus('キャンセルしました', 'warn');
-  }, 5000);
+  showStatus(`${_deleteIds.length}件見つかりました。もう一度押して削除`, 'warn');
+
+  _deleteCancelHandler = e => {
+    if (e.target !== btn) resetBulkDelete('キャンセルしました');
+  };
+  setTimeout(() => document.addEventListener('click', _deleteCancelHandler, true), 0);
 }
 
-async function fetchRegisteredIds(dates) {
-  const ids = [];
+async function bulkDeleteIds(ids) {
+  const results = await runConcurrent(
+    ids,
+    async id => {
+      const res = await fetch(`${CALENDAR_API}/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      return res.ok || res.status === 204 || res.status === 410;
+    },
+    (done, total) => showStatus(`${done} / ${total} 件削除中…`, 'ok')
+  );
+  return results.filter(r => r.ok && r.value).length;
+}
+
+async function fetchExistingCourseCodes(dates) {
+  const codes = new Set();
   let pageToken = null;
   do {
     const params = new URLSearchParams({
@@ -362,10 +548,80 @@ async function fetchRegisteredIds(dates) {
       throw new Error(err.error?.message || res.statusText);
     }
     const data = await res.json();
+    for (const item of (data.items || [])) {
+      const code = item.extendedProperties?.private?.courseCode;
+      if (code) codes.add(code);
+    }
+    pageToken = data.nextPageToken || null;
+  } while (pageToken);
+  return codes;
+}
+
+async function fetchRegisteredIds(dates, courseCode = null) {
+  const ids = [];
+  let pageToken = null;
+  do {
+    const params = new URLSearchParams({
+      privateExtendedProperty: courseCode ? `courseCode=${courseCode}` : 'source=classcalendar-letus',
+      timeMin: `${dates.start}T00:00:00+09:00`,
+      timeMax: `${dates.end}T23:59:59+09:00`,
+      singleEvents: 'true',
+      maxResults: '250',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+    const res = await fetch(`${CALENDAR_API}?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || res.statusText);
+    }
+    const data = await res.json();
     ids.push(...(data.items || []).map(e => e.id));
     pageToken = data.nextPageToken || null;
   } while (pageToken);
   return ids;
+}
+
+async function deleteCourse(course, btn) {
+  if (!accessToken) { showStatus('先にGoogleにログインしてください', 'warn'); return; }
+  const dates = getDateRange();
+  if (!dates) return;
+  if (!course.courseCode) { showStatus('授業コードが取得できていません', 'warn'); return; }
+
+  // 2回目クリック → 確定削除
+  if (_courseDeleteBtn === btn) {
+    const ids = _courseDeleteIds;
+    resetCourseDelete(null);
+    const deleted = await bulkDeleteIds(ids);
+    showStatus(`「${course.name}」の予定を${deleted}件削除しました`, 'ok');
+    return;
+  }
+
+  // 別ボタンがconfirm中なら先にリセット
+  resetCourseDelete(null);
+
+  // 1回目クリック → 件数検索
+  showStatus('検索中…', 'ok');
+  let ids;
+  try {
+    ids = await fetchRegisteredIds(dates, course.courseCode);
+  } catch (e) {
+    showStatus('取得失敗: ' + e.message, 'error');
+    return;
+  }
+  if (!ids.length) { showStatus('期間内に削除対象の予定が見つかりません', 'warn'); return; }
+
+  _courseDeleteIds = ids;
+  _courseDeleteBtn = btn;
+  btn.textContent = `⚠${ids.length}`;
+  btn.classList.add('confirm');
+  showStatus(`${ids.length}件見つかりました。もう一度押して削除`, 'warn');
+
+  _courseDeleteCancelHandler = e => {
+    if (e.target !== btn) resetCourseDelete('キャンセルしました');
+  };
+  setTimeout(() => document.addEventListener('click', _courseDeleteCancelHandler, true), 0);
 }
 
 // ---- UI描画 ----
@@ -436,15 +692,28 @@ function makeCourseCard(course) {
   const dlBtn = document.createElement('button');
   dlBtn.className = 'btn-dl';
   dlBtn.textContent = '💾';
+  dlBtn.title = 'ICSをダウンロード';
   dlBtn.addEventListener('click', () => courseAction(course, 'dl'));
 
   const regBtn = document.createElement('button');
   regBtn.className = 'btn-reg';
   regBtn.textContent = '📅';
-  regBtn.addEventListener('click', () => courseAction(course, 'reg'));
+  regBtn.title = 'Googleカレンダーに登録';
+  regBtn.addEventListener('click', () => {
+    regBtn.disabled = true;
+    setTimeout(() => { regBtn.disabled = false; }, 500);
+    courseAction(course, 'reg', regBtn);
+  });
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn-del';
+  delBtn.textContent = '🗑';
+  delBtn.title = '登録済み予定を削除';
+  delBtn.addEventListener('click', () => deleteCourse(course, delBtn));
 
   btns.appendChild(dlBtn);
   btns.appendChild(regBtn);
+  btns.appendChild(delBtn);
   card.appendChild(info);
   card.appendChild(btns);
   return card;

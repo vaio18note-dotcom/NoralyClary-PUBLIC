@@ -18,20 +18,20 @@
   </section>
 
   <div class="action-row">
-    <button id="scrapeBtn">📋 時間割を取得</button>
-    <button id="loginBtn">🔑 Googleログイン</button>
+    <button id="scrapeBtn" title="CLASSの時間割ページから授業を読み込む">📋 時間割を再取得</button>
+    <button id="loginBtn" title="Googleカレンダーに直接登録するためにログイン">🔑 Googleログイン</button>
   </div>
 
   <div id="courseList"></div>
 
   <div class="bulk-area" id="bulkArea" style="display:none">
     <div class="bulk-row">
-      <button id="bulkDlBtn"  class="bulk-dl">💾 月〜金を一括DL</button>
-      <button id="bulkRegBtn" class="bulk-reg">📅 月〜金を一括登録</button>
+      <button id="bulkDlBtn"  class="bulk-dl"  title="月〜金の全授業をまとめてICSファイルにダウンロード">💾 月〜金を一括DL</button>
+      <button id="bulkRegBtn" class="bulk-reg" title="月〜金の全授業をGoogleカレンダーに一括登録">📅 月〜金を一括登録</button>
     </div>
     <p class="bulk-hint">DL → Googleカレンダー設定 → インポート</p>
     <div class="bulk-row" style="margin-top:8px">
-      <button id="deleteBtn" class="bulk-delete">🗑 登録済み予定を削除</button>
+      <button id="deleteBtn" class="bulk-delete" title="この拡張機能で登録した期間内の予定をまとめて削除">🗑 登録済み予定を削除</button>
     </div>
   </div>
 

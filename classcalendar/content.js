@@ -47,18 +47,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         // room: span 要素（"葛：E503教室" 形式）
         const room = jugyo.querySelector('span')?.textContent.trim() || '';
 
-        // teacher: fontB の直後にある class="" かつ span を持たない div
-        let teacher = '';
-        let afterName = false;
+        // teacher・courseCode: fontB の後の class="" かつ span なし div（1つ目=教員名、2つ目=授業コード）
+        let teacher = '', courseCode = '';
+        let afterName = false, emptyCount = 0;
         for (const child of jugyo.children) {
           if (child.classList.contains('fontB')) { afterName = true; continue; }
           if (afterName && child.className === '' && !child.querySelector('span')) {
-            teacher = child.textContent.trim();
-            break;
+            emptyCount++;
+            if (emptyCount === 1) teacher = child.textContent.trim();
+            if (emptyCount === 2) { courseCode = child.textContent.trim(); break; }
           }
         }
 
-        courses.push({ period, day, name, room, teacher });
+        courses.push({ period, day, name, room, teacher, courseCode });
       });
     }
   }
