@@ -133,6 +133,14 @@ function isInRange(yyyymmdd, endDateStr) {
   return new Date(Date.UTC(fy, fm - 1, fd, 12, 0, 0)) <= end;
 }
 
+function countOccurrences(course, dates) {
+  const firstOcc = firstOccurrence(dates.start, course.day);
+  const fmt = s => `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+  const first = new Date(`${fmt(firstOcc)}T00:00:00Z`);
+  const end   = new Date(`${dates.end}T00:00:00Z`);
+  return Math.floor((end - first) / (7 * 86400000)) + 1;
+}
+
 function rruleUntilDateTime(endDateStr) {
   const d = new Date(`${endDateStr}T23:59:59+09:00`);
   const p = n => String(n).padStart(2, '0');
@@ -264,9 +272,10 @@ function buildGCalEvent(course, dates) {
   };
 }
 
-async function runConcurrent(items, fn, onProgress, limit = 5) {
-  const results = new Array(items.length);
-  let next = 0, done = 0;
+async function runConcurrent(items, fn, onProgress, limit = 5, weights = null) {
+  const results     = new Array(items.length);
+  const totalWeight = weights ? weights.reduce((a, b) => a + b, 0) : items.length;
+  let next = 0, doneWeight = 0;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
     while (next < items.length) {
       const i = next++;
@@ -275,8 +284,8 @@ async function runConcurrent(items, fn, onProgress, limit = 5) {
       } catch (e) {
         results[i] = { ok: false, error: e };
       }
-      done++;
-      onProgress(done, items.length);
+      doneWeight += weights ? weights[i] : 1;
+      onProgress(doneWeight, totalWeight);
     }
   });
   await Promise.all(workers);
@@ -364,7 +373,7 @@ async function courseAction(course, mode, btn = null) {
     resetRegConfirm(null);
     try {
       await postToCalendar(c, d);
-      showStatus(`「${c.name}」を登録しました ✓`, 'ok');
+      showStatus(`「${c.name}」を ${countOccurrences(c, d)} 件登録しました ✓`, 'ok');
     } catch (e) {
       showStatus(`登録失敗: ${e.message}`, 'error');
     }
@@ -387,7 +396,7 @@ async function courseAction(course, mode, btn = null) {
   if (dupCount === 0) {
     try {
       await postToCalendar(course, dates);
-      showStatus(`「${course.name}」を登録しました ✓`, 'ok');
+      showStatus(`「${course.name}」を ${countOccurrences(course, dates)} 件登録しました ✓`, 'ok');
     } catch (e) {
       showStatus(`登録失敗: ${e.message}`, 'error');
     }
@@ -429,17 +438,21 @@ async function bulkAction(mode) {
   if (_bulkRegCancelHandler) {
     const ts = _bulkRegTargets, d = _bulkRegDates;
     resetBulkRegConfirm(null);
+    const occs_ts = ts.map(c => countOccurrences(c, d));
     const results = await runConcurrent(
       ts,
       course => postToCalendar(course, d),
-      (done, total) => showStatus(`${done} / ${total} 件登録中…`, 'ok')
+      (done, total) => showStatus(`${done} / ${total} 件登録中…`, 'ok'),
+      5, occs_ts
     );
-    const success = results.filter(r => r.ok).length;
-    const firstError = results.find(r => !r.ok)?.error?.message;
+    const success     = results.filter(r => r.ok).length;
+    const successOcc  = ts.reduce((acc, c, i) => acc + (results[i]?.ok ? occs_ts[i] : 0), 0);
+    const totalOcc    = occs_ts.reduce((a, b) => a + b, 0);
+    const firstError  = results.find(r => !r.ok)?.error?.message;
     if (success === 0 && firstError) {
       showStatus(`登録失敗: ${firstError}`, 'error');
     } else {
-      showStatus(`完了: ${success} / ${ts.length} 件登録しました`, success === ts.length ? 'ok' : 'warn');
+      showStatus(`完了: ${successOcc} / ${totalOcc} 件登録しました`, success === ts.length ? 'ok' : 'warn');
     }
     return;
   }
@@ -457,17 +470,21 @@ async function bulkAction(mode) {
   const dupCount = targets.filter(c => c.courseCode && existingCodes.has(c.courseCode)).length;
 
   if (dupCount === 0) {
+    const occs = targets.map(c => countOccurrences(c, dates));
     const results = await runConcurrent(
       targets,
       course => postToCalendar(course, dates),
-      (done, total) => showStatus(`${done} / ${total} 件登録中…`, 'ok')
+      (done, total) => showStatus(`${done} / ${total} 件登録中…`, 'ok'),
+      5, occs
     );
-    const success = results.filter(r => r.ok).length;
-    const firstError = results.find(r => !r.ok)?.error?.message;
+    const success     = results.filter(r => r.ok).length;
+    const successOcc  = targets.reduce((acc, c, i) => acc + (results[i]?.ok ? occs[i] : 0), 0);
+    const totalOcc    = occs.reduce((a, b) => a + b, 0);
+    const firstError  = results.find(r => !r.ok)?.error?.message;
     if (success === 0 && firstError) {
       showStatus(`登録失敗: ${firstError}`, 'error');
     } else {
-      showStatus(`完了: ${success} / ${targets.length} 件登録しました`, success === targets.length ? 'ok' : 'warn');
+      showStatus(`完了: ${successOcc} / ${totalOcc} 件登録しました`, success === targets.length ? 'ok' : 'warn');
     }
     return;
   }
