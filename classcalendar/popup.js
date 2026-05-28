@@ -42,10 +42,11 @@ async function getCalendarId() {
 // ---- 初期化 ----
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const stored = await chrome.storage.local.get(['startDate', 'endDate', 'eventColor']);
+  const stored = await chrome.storage.local.get(['startDate', 'endDate', 'eventColor', 'notifyMinutes']);
   if (stored.startDate)  document.getElementById('startDate').value  = stored.startDate;
   if (stored.endDate)    document.getElementById('endDate').value    = stored.endDate;
   if (stored.eventColor) document.getElementById('eventColor').value = stored.eventColor;
+  document.getElementById('notifyMinutes').value = stored.notifyMinutes ?? '10';
 
   await tryScrape();
 });
@@ -56,6 +57,8 @@ document.getElementById('endDate').addEventListener('change', e =>
   chrome.storage.local.set({ endDate: e.target.value }));
 document.getElementById('eventColor').addEventListener('change', e =>
   chrome.storage.local.set({ eventColor: e.target.value }));
+document.getElementById('notifyMinutes').addEventListener('change', e =>
+  chrome.storage.local.set({ notifyMinutes: e.target.value }));
 
 document.getElementById('scrapeBtn').addEventListener('click', tryScrape);
 document.getElementById('loginBtn').addEventListener('click', authenticate);
@@ -148,7 +151,8 @@ function escapeICS(str) {
 
 function buildVEVENT(course, dates) {
   const { period, day, name, room } = course;
-  const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@classcalendar`;
+  const uid       = `${Date.now()}-${Math.random().toString(36).slice(2)}@classcalendar`;
+  const notifyMin = parseInt(document.getElementById('notifyMinutes').value) || 0;
 
   if (day === 6) {
     const firstDate = firstOccurrence(dates.start, 6);
@@ -169,6 +173,13 @@ function buildVEVENT(course, dates) {
 
   const { start: st, end: et } = PERIODS[period];
   const firstDate = firstOccurrence(dates.start, day);
+  const valarm = notifyMin ? [
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${escapeICS(name)}`,
+    `TRIGGER:-PT${notifyMin}M`,
+    'END:VALARM',
+  ] : [];
   return [
     'BEGIN:VEVENT',
     `UID:${uid}`,
@@ -177,6 +188,7 @@ function buildVEVENT(course, dates) {
     `RRULE:FREQ=WEEKLY;BYDAY=${RRULE_DAY[day]};UNTIL=${rruleUntilDateTime(dates.end)}`,
     `SUMMARY:${escapeICS(name)}`,
     ...(room ? [`LOCATION:${escapeICS(room)}`] : []),
+    ...valarm,
     'END:VEVENT',
   ];
 }
@@ -213,7 +225,11 @@ function downloadICS(icsContent, filename) {
 
 function buildGCalEvent(course, dates) {
   const { period, day, name, room } = course;
-  const colorId = document.getElementById('eventColor').value || undefined;
+  const colorId    = document.getElementById('eventColor').value || undefined;
+  const notifyMin  = parseInt(document.getElementById('notifyMinutes').value) || 0;
+  const reminders  = notifyMin
+    ? { useDefault: false, overrides: [{ method: 'popup', minutes: notifyMin }] }
+    : { useDefault: false, overrides: [] };
 
   const EXT = { extendedProperties: { private: { source: 'classcalendar-letus', courseCode: course.courseCode || '' } } };
 
@@ -244,6 +260,7 @@ function buildGCalEvent(course, dates) {
     recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=${RRULE_DAY[day]};UNTIL=${rruleUntilDateTime(dates.end)}`],
     ...EXT,
     ...(colorId && { colorId }),
+    reminders,
   };
 }
 
