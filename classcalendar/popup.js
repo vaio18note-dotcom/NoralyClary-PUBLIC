@@ -10,18 +10,42 @@ const PERIODS = {
 
 const DAY_LABEL = { 1: '月', 2: '火', 3: '水', 4: '木', 5: '金', 6: '土' };
 const RRULE_DAY = { 1: 'MO', 2: 'TU', 3: 'WE', 4: 'TH', 5: 'FR', 6: 'SA' };
-const CALENDAR_API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+const GCAL_BASE = 'https://www.googleapis.com/calendar/v3/calendars';
 
 // アクセストークンはメモリのみ保持（ポップアップを閉じると消える）
 let accessToken = null;
 let courses = [];
+let calendarId = null;
+
+async function getCalendarId() {
+  if (calendarId) return calendarId;
+  const stored = await chrome.storage.local.get('calendarId');
+  if (stored.calendarId) {
+    calendarId = stored.calendarId;
+    return calendarId;
+  }
+  const res = await fetch(`${GCAL_BASE}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ summary: 'CLASS時間割' }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || res.statusText);
+  }
+  const data = await res.json();
+  calendarId = data.id;
+  await chrome.storage.local.set({ calendarId });
+  return calendarId;
+}
 
 // ---- 初期化 ----
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const stored = await chrome.storage.local.get(['startDate', 'endDate']);
-  if (stored.startDate) document.getElementById('startDate').value = stored.startDate;
-  if (stored.endDate)   document.getElementById('endDate').value   = stored.endDate;
+  const stored = await chrome.storage.local.get(['startDate', 'endDate', 'eventColor']);
+  if (stored.startDate)  document.getElementById('startDate').value  = stored.startDate;
+  if (stored.endDate)    document.getElementById('endDate').value    = stored.endDate;
+  if (stored.eventColor) document.getElementById('eventColor').value = stored.eventColor;
 
   await tryScrape();
 });
@@ -30,6 +54,8 @@ document.getElementById('startDate').addEventListener('change', e =>
   chrome.storage.local.set({ startDate: e.target.value }));
 document.getElementById('endDate').addEventListener('change', e =>
   chrome.storage.local.set({ endDate: e.target.value }));
+document.getElementById('eventColor').addEventListener('change', e =>
+  chrome.storage.local.set({ eventColor: e.target.value }));
 
 document.getElementById('scrapeBtn').addEventListener('click', tryScrape);
 document.getElementById('loginBtn').addEventListener('click', authenticate);
@@ -187,6 +213,7 @@ function downloadICS(icsContent, filename) {
 
 function buildGCalEvent(course, dates) {
   const { period, day, name, room } = course;
+  const colorId = document.getElementById('eventColor').value || undefined;
 
   const EXT = { extendedProperties: { private: { source: 'classcalendar-letus', courseCode: course.courseCode || '' } } };
 
@@ -202,6 +229,7 @@ function buildGCalEvent(course, dates) {
       end:   { date: next.toISOString().slice(0, 10) },
       recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=SA;UNTIL=${rruleUntilDate(dates.end)}`],
       ...EXT,
+      ...(colorId && { colorId }),
     };
   }
 
@@ -215,6 +243,7 @@ function buildGCalEvent(course, dates) {
     end:   { dateTime: `${fmt(firstDate)}T${et}:00`, timeZone: 'Asia/Tokyo' },
     recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=${RRULE_DAY[day]};UNTIL=${rruleUntilDateTime(dates.end)}`],
     ...EXT,
+    ...(colorId && { colorId }),
   };
 }
 
@@ -238,7 +267,8 @@ async function runConcurrent(items, fn, onProgress, limit = 5) {
 }
 
 async function postToCalendar(course, dates) {
-  const res = await fetch(CALENDAR_API, {
+  const calId = await getCalendarId();
+  const res = await fetch(`${GCAL_BASE}/${calId}/events`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(buildGCalEvent(course, dates)),
@@ -440,7 +470,8 @@ async function bulkAction(mode) {
 
 // ---- 削除 ----
 
-let _deleteIds          = [];
+let _deleteIds           = [];
+let _deleteFromPrimary   = false;
 let _deleteCancelHandler = null;
 
 function resetBulkDelete(msg) {
@@ -449,14 +480,16 @@ function resetBulkDelete(msg) {
     _deleteCancelHandler = null;
   }
   _deleteIds = [];
+  _deleteFromPrimary = false;
   const btn = document.getElementById('deleteBtn');
   btn.textContent = '🗑 登録済み予定を削除';
   btn.classList.remove('confirm');
   if (msg) showStatus(msg, 'warn');
 }
 
-let _courseDeleteIds          = [];
-let _courseDeleteBtn          = null;
+let _courseDeleteIds           = [];
+let _courseDeleteFromPrimary   = false;
+let _courseDeleteBtn           = null;
 let _courseDeleteCancelHandler = null;
 
 function resetCourseDelete(msg) {
@@ -465,6 +498,7 @@ function resetCourseDelete(msg) {
     _courseDeleteCancelHandler = null;
   }
   _courseDeleteIds = [];
+  _courseDeleteFromPrimary = false;
   if (_courseDeleteBtn) {
     _courseDeleteBtn.textContent = '🗑';
     _courseDeleteBtn.classList.remove('confirm');
@@ -483,8 +517,9 @@ async function deleteRegistered() {
   // 2回目クリック → 確定削除
   if (_deleteCancelHandler) {
     const ids = _deleteIds;
+    const fromPrimary = _deleteFromPrimary;
     resetBulkDelete(null);
-    const deleted = await bulkDeleteIds(ids);
+    const deleted = await bulkDeleteIds(ids, fromPrimary);
     showStatus(`${deleted}件の予定を削除しました`, 'ok');
     return;
   }
@@ -493,6 +528,10 @@ async function deleteRegistered() {
   showStatus('検索中…', 'ok');
   try {
     _deleteIds = await fetchRegisteredIds(dates);
+    if (!_deleteIds.length && courses.length) {
+      _deleteIds = await fetchIdsByNames(dates);
+      _deleteFromPrimary = _deleteIds.length > 0;
+    }
   } catch (e) {
     showStatus('取得失敗: ' + e.message, 'error');
     return;
@@ -513,11 +552,12 @@ async function deleteRegistered() {
   setTimeout(() => document.addEventListener('click', _deleteCancelHandler, true), 0);
 }
 
-async function bulkDeleteIds(ids) {
+async function bulkDeleteIds(ids, fromPrimary = false) {
+  const calId = fromPrimary ? 'primary' : await getCalendarId();
   const results = await runConcurrent(
     ids,
     async id => {
-      const res = await fetch(`${CALENDAR_API}/${id}`, {
+      const res = await fetch(`${GCAL_BASE}/${calId}/events/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -529,6 +569,7 @@ async function bulkDeleteIds(ids) {
 }
 
 async function fetchExistingCourseCodes(dates) {
+  const calId = await getCalendarId();
   const codes = new Set();
   let pageToken = null;
   do {
@@ -540,7 +581,7 @@ async function fetchExistingCourseCodes(dates) {
       maxResults: '250',
     });
     if (pageToken) params.set('pageToken', pageToken);
-    const res = await fetch(`${CALENDAR_API}?${params}`, {
+    const res = await fetch(`${GCAL_BASE}/${calId}/events?${params}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) {
@@ -557,7 +598,35 @@ async function fetchExistingCourseCodes(dates) {
   return codes;
 }
 
+async function fetchIdsByNames(dates) {
+  // 旧バージョンはprimaryに登録していたためprimaryを検索
+  const ids = [];
+  let pageToken = null;
+  do {
+    const params = new URLSearchParams({
+      privateExtendedProperty: 'source=classcalendar-letus',
+      timeMin: `${dates.start}T00:00:00+09:00`,
+      timeMax: `${dates.end}T23:59:59+09:00`,
+      singleEvents: 'true',
+      maxResults: '250',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+    const res = await fetch(`${GCAL_BASE}/primary/events?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || res.statusText);
+    }
+    const data = await res.json();
+    ids.push(...(data.items || []).map(e => e.id));
+    pageToken = data.nextPageToken || null;
+  } while (pageToken);
+  return ids;
+}
+
 async function fetchRegisteredIds(dates, courseCode = null) {
+  const calId = await getCalendarId();
   const ids = [];
   let pageToken = null;
   do {
@@ -569,7 +638,7 @@ async function fetchRegisteredIds(dates, courseCode = null) {
       maxResults: '250',
     });
     if (pageToken) params.set('pageToken', pageToken);
-    const res = await fetch(`${CALENDAR_API}?${params}`, {
+    const res = await fetch(`${GCAL_BASE}/${calId}/events?${params}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) {
@@ -592,8 +661,9 @@ async function deleteCourse(course, btn) {
   // 2回目クリック → 確定削除
   if (_courseDeleteBtn === btn) {
     const ids = _courseDeleteIds;
+    const fromPrimary = _courseDeleteFromPrimary;
     resetCourseDelete(null);
-    const deleted = await bulkDeleteIds(ids);
+    const deleted = await bulkDeleteIds(ids, fromPrimary);
     showStatus(`「${course.name}」の予定を${deleted}件削除しました`, 'ok');
     return;
   }
@@ -606,6 +676,10 @@ async function deleteCourse(course, btn) {
   let ids;
   try {
     ids = await fetchRegisteredIds(dates, course.courseCode);
+    if (!ids.length) {
+      ids = await fetchIdsByNames(dates);
+      _courseDeleteFromPrimary = ids.length > 0;
+    }
   } catch (e) {
     showStatus('取得失敗: ' + e.message, 'error');
     return;
