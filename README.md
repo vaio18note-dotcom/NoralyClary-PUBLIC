@@ -13,7 +13,9 @@
 
 ## インストール方法
 
-### Chrome Web Store からインストール（準備中）
+### Chrome Web Store からインストール
+
+[Chrome Web Store のページはこちら](https://chromewebstore.google.com/detail/kbbcamaakhbnehaimnigjlfngecfflkj)
 
 ### 手動インストール（開発者モード）
 
