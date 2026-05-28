@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Class Calendar",
-  "version": "1.0",
+  "version": "1.1",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArxJYRFID2VdhcFFs1TUj9443pNz0Yla6T4f2s7flv5aAKi2M3edAkJ8OV2URTetSUoT2o482LlC11KVHoFRJoVJi3ZLXVw6K8qespahXhMi8ikKks5U6mTKRBOzHVNo3QaTBuxU9XGKoAGLX56jNwYa0TthpSTbl2msm2IvTojOXy3H9cwI0DPwg5Op0DHeTOq3IIhpz3NU33UqFOlvQIUXzFNrAv5rZ62OLgspjvAboHejohdHUgD9D5aRVjD2C4/PzOYgqZOodStPwXfHuwLKn44GJF7JDdhZ2KDDcecWRZjGUrGz2NHsg2GOS3O6doa3tH6/+O+n7r+urvokZnwIDAQAB",
   "description": "CLASSの時間割をGoogleカレンダーに登録する",
   "permissions": ["storage", "tabs", "identity", "scripting"],
   "host_permissions": [
@@ -10,7 +11,7 @@
   ],
   "oauth2": {
     "client_id": "337364291153-9gngmql8guhk9mjflr0i4u1up8iovoi7.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/calendar.events"]
+    "scopes": ["https://www.googleapis.com/auth/calendar"]
   },
   "icons": {
     "128": "128pxcc.png"
