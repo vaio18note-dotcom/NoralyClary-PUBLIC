@@ -1,4 +1,7 @@
-# Privacy Policy — CLASS Calendar
+---
+layout: default
+title: Privacy Policy — CLASS Calendar
+---
 
 Last Updated: May 30, 2026 / 最終更新日: 2026年5月30日
 
