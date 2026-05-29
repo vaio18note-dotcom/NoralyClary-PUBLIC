@@ -237,7 +237,7 @@ function buildGCalEvent(course, dates) {
   const notifyMin  = parseInt(document.getElementById('notifyMinutes').value) || 0;
   const reminders  = notifyMin
     ? { useDefault: false, overrides: [{ method: 'popup', minutes: notifyMin }] }
-    : { useDefault: false, overrides: [] };
+    : undefined;
 
   const EXT = { extendedProperties: { private: { source: 'classcalendar-letus', courseCode: course.courseCode || '' } } };
 
@@ -268,7 +268,7 @@ function buildGCalEvent(course, dates) {
     recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=${RRULE_DAY[day]};UNTIL=${rruleUntilDateTime(dates.end)}`],
     ...EXT,
     ...(colorId && { colorId }),
-    reminders,
+    ...(reminders && { reminders }),
   };
 }
 
@@ -467,7 +467,9 @@ async function bulkAction(mode) {
     return;
   }
 
-  const dupCount = targets.filter(c => c.courseCode && existingCodes.has(c.courseCode)).length;
+  const dupCourses = targets.filter(c => c.courseCode && existingCodes.has(c.courseCode));
+  const dupCount   = dupCourses.length;
+  const dupOcc     = dupCourses.reduce((acc, c) => acc + countOccurrences(c, dates), 0);
 
   if (dupCount === 0) {
     const occs = targets.map(c => countOccurrences(c, dates));
@@ -492,9 +494,9 @@ async function bulkAction(mode) {
   // 重複あり → 確認待ち
   _bulkRegTargets = targets;
   _bulkRegDates   = dates;
-  bulkRegBtn.textContent = `⚠ ${dupCount}件重複 もう一度押して続行`;
+  bulkRegBtn.textContent = `⚠ ${dupOcc}件重複 もう一度押して続行`;
   bulkRegBtn.classList.add('confirm');
-  showStatus(`${dupCount}件重複する予定があります。もう一度押して続行`, 'warn');
+  showStatus(`${dupOcc}件重複する予定があります。もう一度押して続行`, 'warn');
 
   _bulkRegCancelHandler = e => {
     if (e.target !== bulkRegBtn) resetBulkRegConfirm('キャンセルしました');
@@ -553,8 +555,11 @@ async function deleteRegistered() {
     const ids = _deleteIds;
     const fromPrimary = _deleteFromPrimary;
     resetBulkDelete(null);
-    const deleted = await bulkDeleteIds(ids, fromPrimary);
-    showStatus(`${deleted}件の予定を削除しました`, 'ok');
+    const { deleted, partialFail } = await bulkDeleteIds(ids, fromPrimary);
+    showStatus(
+      partialFail ? `一部削除に失敗しました（${deleted} / ${ids.length}件削除）` : `${deleted}件の予定を削除しました`,
+      partialFail ? 'warn' : 'ok'
+    );
     return;
   }
 
@@ -588,18 +593,39 @@ async function deleteRegistered() {
 
 async function bulkDeleteIds(ids, fromPrimary = false) {
   const calId = fromPrimary ? 'primary' : await getCalendarId();
-  const results = await runConcurrent(
-    ids,
+
+  const doDelete = (targetIds, prefix = '') => runConcurrent(
+    targetIds,
     async id => {
-      const res = await fetch(`${GCAL_BASE}/${calId}/events/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      return res.ok || res.status === 204 || res.status === 410;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await fetch(`${GCAL_BASE}/${calId}/events/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (res.ok || res.status === 204 || res.status === 410) return true;
+        if (res.status !== 429 && res.status !== 503) return false;
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      }
+      return false;
     },
-    (done, total) => showStatus(`${done} / ${total} 件削除中…`, 'ok')
+    (done, total) => showStatus(`${prefix}${done} / ${total} 件削除中…`, 'ok')
   );
-  return results.filter(r => r.ok && r.value).length;
+
+  const results = await doDelete(ids);
+  const failedIds = ids.filter((_, i) => !(results[i]?.ok && results[i]?.value));
+
+  if (!failedIds.length) return { deleted: ids.length, partialFail: false };
+
+  // 失敗分を1回だけ再試行
+  showStatus(`${failedIds.length}件を再試行中…`, 'warn');
+  await new Promise(r => setTimeout(r, 1500));
+  const retryResults = await doDelete(failedIds, '再試行 ');
+  const stillFailed  = failedIds.filter((_, i) => !(retryResults[i]?.ok && retryResults[i]?.value));
+
+  return {
+    deleted: ids.length - stillFailed.length,
+    partialFail: stillFailed.length > 0,
+  };
 }
 
 async function fetchExistingCourseCodes(dates) {
@@ -697,8 +723,11 @@ async function deleteCourse(course, btn) {
     const ids = _courseDeleteIds;
     const fromPrimary = _courseDeleteFromPrimary;
     resetCourseDelete(null);
-    const deleted = await bulkDeleteIds(ids, fromPrimary);
-    showStatus(`「${course.name}」の予定を${deleted}件削除しました`, 'ok');
+    const { deleted, partialFail } = await bulkDeleteIds(ids, fromPrimary);
+    showStatus(
+      partialFail ? `一部削除に失敗しました（${deleted} / ${ids.length}件削除）` : `「${course.name}」の予定を${deleted}件削除しました`,
+      partialFail ? 'warn' : 'ok'
+    );
     return;
   }
 
