@@ -16,6 +16,7 @@ const GCAL_BASE = 'https://www.googleapis.com/calendar/v3/calendars';
 let accessToken = null;
 let courses = [];
 let calendarId = null;
+let _storedCalError = null;
 
 async function getCalendarId() {
   if (calendarId) return calendarId;
@@ -402,10 +403,11 @@ async function courseAction(course, mode, btn = null) {
     return;
   }
 
+  const errSuffix = _storedCalError ? ` (CLASS時間割: 確認不可)` : '';
   if (dupCount === 0) {
     try {
       await postToCalendar(course, dates);
-      showStatus(`「${course.name}」を ${countOccurrences(course, dates)} 件登録しました ✓`, 'ok');
+      showStatus(`「${course.name}」を ${countOccurrences(course, dates)} 件登録しました ✓${errSuffix}`, _storedCalError ? 'warn' : 'ok');
     } catch (e) {
       showStatus(`登録失敗: ${e.message}`, 'error');
     }
@@ -418,7 +420,7 @@ async function courseAction(course, mode, btn = null) {
   _regPendingDates  = dates;
   btn.textContent = `⚠${dupCount}`;
   btn.classList.add('confirm');
-  showStatus(`${dupCount}件重複する予定があります。もう一度押して続行`, 'warn');
+  showStatus(`${dupCount}件重複する予定があります。もう一度押して続行${errSuffix}`, 'warn');
 
   _regCancelHandler = e => {
     if (e.target !== btn) resetRegConfirm('キャンセルしました');
@@ -476,10 +478,13 @@ async function bulkAction(mode) {
     return;
   }
 
-  const dupCourses = targets.filter(c => c.courseCode && existingCodes.has(c.courseCode));
+  const dupCourses = targets.filter(c =>
+    c.courseCode ? existingCodes.has(c.courseCode) : existingCodes.has('')
+  );
   const dupCount   = dupCourses.length;
   const dupOcc     = dupCourses.reduce((acc, c) => acc + countOccurrences(c, dates), 0);
 
+  const errSuffix = _storedCalError ? ` (CLASS時間割: 確認不可)` : '';
   if (dupCount === 0) {
     const occs = targets.map(c => countOccurrences(c, dates));
     const results = await runConcurrent(
@@ -495,7 +500,7 @@ async function bulkAction(mode) {
     if (success === 0 && firstError) {
       showStatus(`登録失敗: ${firstError}`, 'error');
     } else {
-      showStatus(`完了: ${successOcc} / ${totalOcc} 件登録しました`, success === targets.length ? 'ok' : 'warn');
+      showStatus(`完了: ${successOcc} / ${totalOcc} 件登録しました${errSuffix}`, success === targets.length && !_storedCalError ? 'ok' : 'warn');
     }
     return;
   }
@@ -505,7 +510,7 @@ async function bulkAction(mode) {
   _bulkRegDates   = dates;
   bulkRegBtn.textContent = `⚠ ${dupOcc}件重複 もう一度押して続行`;
   bulkRegBtn.classList.add('confirm');
-  showStatus(`${dupOcc}件重複する予定があります。もう一度押して続行`, 'warn');
+  showStatus(`${dupOcc}件重複する予定があります。もう一度押して続行${errSuffix}`, 'warn');
 
   _bulkRegCancelHandler = e => {
     if (e.target !== bulkRegBtn) resetBulkRegConfirm('キャンセルしました');
@@ -559,12 +564,12 @@ async function deleteRegistered() {
   if (_deleteCancelHandler) {
     const groups = _deleteGroups;
     resetBulkDelete(null);
-    let deletedCount = 0, totalCount = 0, anyFail = false;
+    const totalCount = groups.reduce((sum, g) => sum + g.ids.length, 0);
+    let deletedCount = 0, anyFail = false;
     for (const { calId, ids } of groups) {
-      const { deleted, partialFail } = await bulkDeleteIds(ids, calId);
-      deletedCount += deleted;
-      totalCount += ids.length;
-      if (partialFail) anyFail = true;
+      const r = await bulkDeleteIds(ids, calId);
+      deletedCount += r.deleted;
+      anyFail ||= r.partialFail;
     }
     showStatus(
       anyFail ? `一部削除に失敗しました（${deletedCount} / ${totalCount}件削除）` : `${deletedCount}件の予定を削除しました`,
@@ -582,15 +587,16 @@ async function deleteRegistered() {
     return;
   }
 
+  const errSuffix = _storedCalError ? ` (CLASS時間割: 取得失敗)` : '';
   const totalIds = _deleteGroups.reduce((sum, g) => sum + g.ids.length, 0);
   if (!totalIds) {
-    showStatus('期間内に削除対象の予定が見つかりません', 'warn');
+    showStatus(`期間内に削除対象の予定が見つかりません${errSuffix}`, 'warn');
     return;
   }
 
   btn.textContent = `⚠ ${totalIds}件削除 もう一度押して確定`;
   btn.classList.add('confirm');
-  showStatus(`${totalIds}件見つかりました。もう一度押して削除`, 'warn');
+  showStatus(`${totalIds}件見つかりました。もう一度押して削除${errSuffix}`, 'warn');
 
   _deleteCancelHandler = e => {
     if (e.target !== btn) resetBulkDelete('キャンセルしました');
@@ -665,20 +671,28 @@ async function paginatedCalendarFetch(calId, dates, filter, mapFn) {
 
 async function fetchFromCalendar(calId, dates, courseCode = null) {
   const filter = courseCode ? `courseCode=${courseCode}` : 'source=classcalendar-letus';
-  return paginatedCalendarFetch(calId, dates, filter, item => item.id);
+  return paginatedCalendarFetch(calId, dates, filter, item => item.id ?? null);
 }
 
-async function fetchAllCalendarIds(dates, courseCode = null) {
+async function fetchBothCalendars(fn) {
   const { calendarId: storedId } = await chrome.storage.local.get('calendarId');
-  const [primaryIds, newCalIds] = await Promise.all([
-    fetchFromCalendar('primary', dates, courseCode),
+  _storedCalError = null;
+  const [primary, stored] = await Promise.all([
+    fn('primary'),
     storedId
-      ? fetchFromCalendar(storedId, dates, courseCode).catch(e => {
-          showStatus(`CLASS時間割カレンダーの取得に失敗: ${e.message}`, 'warn');
+      ? fn(storedId).catch(e => {
+          _storedCalError = e.message;
           return [];
         })
       : Promise.resolve([]),
   ]);
+  return { storedId, primary, stored };
+}
+
+async function fetchAllCalendarIds(dates, courseCode = null) {
+  const { storedId, primary: primaryIds, stored: newCalIds } = await fetchBothCalendars(
+    calId => fetchFromCalendar(calId, dates, courseCode)
+  );
   const groups = [];
   if (primaryIds.length) groups.push({ calId: 'primary', ids: primaryIds });
   if (storedId && newCalIds.length) groups.push({ calId: storedId, ids: newCalIds });
@@ -687,14 +701,10 @@ async function fetchAllCalendarIds(dates, courseCode = null) {
 
 async function fetchExistingCourseCodes(dates) {
   const mapFn = item => item.extendedProperties?.private?.courseCode ?? null;
-  const { calendarId: storedId } = await chrome.storage.local.get('calendarId');
-  const [primaryCodes, newCalCodes] = await Promise.all([
-    paginatedCalendarFetch('primary', dates, 'source=classcalendar-letus', mapFn),
-    storedId
-      ? paginatedCalendarFetch(storedId, dates, 'source=classcalendar-letus', mapFn).catch(() => [])
-      : Promise.resolve([]),
-  ]);
-  return new Set([...primaryCodes, ...newCalCodes]);
+  const { primary, stored } = await fetchBothCalendars(
+    calId => paginatedCalendarFetch(calId, dates, 'source=classcalendar-letus', mapFn)
+  );
+  return new Set([...primary, ...stored]);
 }
 
 async function deleteCourse(course, btn) {
@@ -707,12 +717,12 @@ async function deleteCourse(course, btn) {
   if (_courseDeleteBtn === btn) {
     const groups = _courseDeleteGroups;
     resetCourseDelete(null);
-    let deletedCount = 0, totalCount = 0, anyFail = false;
+    const totalCount = groups.reduce((sum, g) => sum + g.ids.length, 0);
+    let deletedCount = 0, anyFail = false;
     for (const { calId, ids } of groups) {
-      const { deleted, partialFail } = await bulkDeleteIds(ids, calId);
-      deletedCount += deleted;
-      totalCount += ids.length;
-      if (partialFail) anyFail = true;
+      const r = await bulkDeleteIds(ids, calId);
+      deletedCount += r.deleted;
+      anyFail ||= r.partialFail;
     }
     showStatus(
       anyFail ? `一部削除に失敗しました（${deletedCount} / ${totalCount}件削除）` : `「${course.name}」の予定を${deletedCount}件削除しました`,
@@ -732,13 +742,14 @@ async function deleteCourse(course, btn) {
     showStatus('取得失敗: ' + e.message, 'error');
     return;
   }
+  const errSuffix = _storedCalError ? ` (CLASS時間割: 取得失敗)` : '';
   const totalIds = _courseDeleteGroups.reduce((sum, g) => sum + g.ids.length, 0);
-  if (!totalIds) { showStatus('期間内に削除対象の予定が見つかりません', 'warn'); return; }
+  if (!totalIds) { showStatus(`期間内に削除対象の予定が見つかりません${errSuffix}`, 'warn'); return; }
 
   _courseDeleteBtn = btn;
   btn.textContent = `⚠${totalIds}`;
   btn.classList.add('confirm');
-  showStatus(`${totalIds}件見つかりました。もう一度押して削除`, 'warn');
+  showStatus(`${totalIds}件見つかりました。もう一度押して削除${errSuffix}`, 'warn');
 
   _courseDeleteCancelHandler = e => {
     if (e.target !== btn) resetCourseDelete('キャンセルしました');
