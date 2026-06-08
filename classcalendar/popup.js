@@ -39,14 +39,21 @@ async function getCalendarId() {
   return calendarId;
 }
 
+async function getTargetCalendarId() {
+  return document.getElementById('useNewCalendar').checked
+    ? await getCalendarId()
+    : 'primary';
+}
+
 // ---- 初期化 ----
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const stored = await chrome.storage.local.get(['startDate', 'endDate', 'eventColor', 'notifyMinutes']);
+  const stored = await chrome.storage.local.get(['startDate', 'endDate', 'eventColor', 'notifyMinutes', 'useNewCalendar']);
   if (stored.startDate)  document.getElementById('startDate').value  = stored.startDate;
   if (stored.endDate)    document.getElementById('endDate').value    = stored.endDate;
   if (stored.eventColor) document.getElementById('eventColor').value = stored.eventColor;
   document.getElementById('notifyMinutes').value = stored.notifyMinutes ?? '10';
+  document.getElementById('useNewCalendar').checked = !!stored.useNewCalendar;
 
   await tryScrape();
 });
@@ -59,6 +66,8 @@ document.getElementById('eventColor').addEventListener('change', e =>
   chrome.storage.local.set({ eventColor: e.target.value }));
 document.getElementById('notifyMinutes').addEventListener('change', e =>
   chrome.storage.local.set({ notifyMinutes: e.target.value }));
+document.getElementById('useNewCalendar').addEventListener('change', e =>
+  chrome.storage.local.set({ useNewCalendar: e.target.checked }));
 
 document.getElementById('scrapeBtn').addEventListener('click', tryScrape);
 document.getElementById('loginBtn').addEventListener('click', authenticate);
@@ -293,7 +302,7 @@ async function runConcurrent(items, fn, onProgress, limit = 5, weights = null) {
 }
 
 async function postToCalendar(course, dates) {
-  const calId = await getCalendarId();
+  const calId = await getTargetCalendarId();
   const res = await fetch(`${GCAL_BASE}/${calId}/events`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -387,7 +396,7 @@ async function courseAction(course, mode, btn = null) {
   showStatus('確認中…', 'ok');
   let dupCount;
   try {
-    dupCount = (await fetchRegisteredIds(dates, course.courseCode)).length;
+    dupCount = (await fetchAllCalendarIds(dates, course.courseCode)).reduce((sum, g) => sum + g.ids.length, 0);
   } catch (e) {
     showStatus('確認失敗: ' + e.message, 'error');
     return;
@@ -506,8 +515,7 @@ async function bulkAction(mode) {
 
 // ---- 削除 ----
 
-let _deleteIds           = [];
-let _deleteFromPrimary   = false;
+let _deleteGroups        = [];
 let _deleteCancelHandler = null;
 
 function resetBulkDelete(msg) {
@@ -515,16 +523,14 @@ function resetBulkDelete(msg) {
     document.removeEventListener('click', _deleteCancelHandler, true);
     _deleteCancelHandler = null;
   }
-  _deleteIds = [];
-  _deleteFromPrimary = false;
+  _deleteGroups = [];
   const btn = document.getElementById('deleteBtn');
   btn.textContent = '🗑 登録済み予定を削除';
   btn.classList.remove('confirm');
   if (msg) showStatus(msg, 'warn');
 }
 
-let _courseDeleteIds           = [];
-let _courseDeleteFromPrimary   = false;
+let _courseDeleteGroups        = [];
 let _courseDeleteBtn           = null;
 let _courseDeleteCancelHandler = null;
 
@@ -533,8 +539,7 @@ function resetCourseDelete(msg) {
     document.removeEventListener('click', _courseDeleteCancelHandler, true);
     _courseDeleteCancelHandler = null;
   }
-  _courseDeleteIds = [];
-  _courseDeleteFromPrimary = false;
+  _courseDeleteGroups = [];
   if (_courseDeleteBtn) {
     _courseDeleteBtn.textContent = '🗑';
     _courseDeleteBtn.classList.remove('confirm');
@@ -552,38 +557,40 @@ async function deleteRegistered() {
 
   // 2回目クリック → 確定削除
   if (_deleteCancelHandler) {
-    const ids = _deleteIds;
-    const fromPrimary = _deleteFromPrimary;
+    const groups = _deleteGroups;
     resetBulkDelete(null);
-    const { deleted, partialFail } = await bulkDeleteIds(ids, fromPrimary);
+    let deletedCount = 0, totalCount = 0, anyFail = false;
+    for (const { calId, ids } of groups) {
+      const { deleted, partialFail } = await bulkDeleteIds(ids, calId);
+      deletedCount += deleted;
+      totalCount += ids.length;
+      if (partialFail) anyFail = true;
+    }
     showStatus(
-      partialFail ? `一部削除に失敗しました（${deleted} / ${ids.length}件削除）` : `${deleted}件の予定を削除しました`,
-      partialFail ? 'warn' : 'ok'
+      anyFail ? `一部削除に失敗しました（${deletedCount} / ${totalCount}件削除）` : `${deletedCount}件の予定を削除しました`,
+      anyFail ? 'warn' : 'ok'
     );
     return;
   }
 
-  // 1回目クリック → 件数検索
+  // 1回目クリック → 件数検索（全カレンダー対象）
   showStatus('検索中…', 'ok');
   try {
-    _deleteIds = await fetchRegisteredIds(dates);
-    if (!_deleteIds.length && courses.length) {
-      _deleteIds = await fetchIdsByNames(dates);
-      _deleteFromPrimary = _deleteIds.length > 0;
-    }
+    _deleteGroups = await fetchAllCalendarIds(dates);
   } catch (e) {
     showStatus('取得失敗: ' + e.message, 'error');
     return;
   }
 
-  if (!_deleteIds.length) {
+  const totalIds = _deleteGroups.reduce((sum, g) => sum + g.ids.length, 0);
+  if (!totalIds) {
     showStatus('期間内に削除対象の予定が見つかりません', 'warn');
     return;
   }
 
-  btn.textContent = `⚠ ${_deleteIds.length}件削除 もう一度押して確定`;
+  btn.textContent = `⚠ ${totalIds}件削除 もう一度押して確定`;
   btn.classList.add('confirm');
-  showStatus(`${_deleteIds.length}件見つかりました。もう一度押して削除`, 'warn');
+  showStatus(`${totalIds}件見つかりました。もう一度押して削除`, 'warn');
 
   _deleteCancelHandler = e => {
     if (e.target !== btn) resetBulkDelete('キャンセルしました');
@@ -591,8 +598,7 @@ async function deleteRegistered() {
   setTimeout(() => document.addEventListener('click', _deleteCancelHandler, true), 0);
 }
 
-async function bulkDeleteIds(ids, fromPrimary = false) {
-  const calId = fromPrimary ? 'primary' : await getCalendarId();
+async function bulkDeleteIds(ids, calId) {
 
   const doDelete = (targetIds, prefix = '') => runConcurrent(
     targetIds,
@@ -628,13 +634,12 @@ async function bulkDeleteIds(ids, fromPrimary = false) {
   };
 }
 
-async function fetchExistingCourseCodes(dates) {
-  const calId = await getCalendarId();
-  const codes = new Set();
+async function paginatedCalendarFetch(calId, dates, filter, mapFn) {
+  const results = [];
   let pageToken = null;
   do {
     const params = new URLSearchParams({
-      privateExtendedProperty: 'source=classcalendar-letus',
+      privateExtendedProperty: filter,
       timeMin: `${dates.start}T00:00:00+09:00`,
       timeMax: `${dates.end}T23:59:59+09:00`,
       singleEvents: 'true',
@@ -650,66 +655,46 @@ async function fetchExistingCourseCodes(dates) {
     }
     const data = await res.json();
     for (const item of (data.items || [])) {
-      const code = item.extendedProperties?.private?.courseCode;
-      if (code) codes.add(code);
+      const val = mapFn(item);
+      if (val != null) results.push(val);
     }
     pageToken = data.nextPageToken || null;
   } while (pageToken);
-  return codes;
+  return results;
 }
 
-async function fetchIdsByNames(dates) {
-  // 旧バージョンはprimaryに登録していたためprimaryを検索
-  const ids = [];
-  let pageToken = null;
-  do {
-    const params = new URLSearchParams({
-      privateExtendedProperty: 'source=classcalendar-letus',
-      timeMin: `${dates.start}T00:00:00+09:00`,
-      timeMax: `${dates.end}T23:59:59+09:00`,
-      singleEvents: 'true',
-      maxResults: '250',
-    });
-    if (pageToken) params.set('pageToken', pageToken);
-    const res = await fetch(`${GCAL_BASE}/primary/events?${params}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || res.statusText);
-    }
-    const data = await res.json();
-    ids.push(...(data.items || []).map(e => e.id));
-    pageToken = data.nextPageToken || null;
-  } while (pageToken);
-  return ids;
+async function fetchFromCalendar(calId, dates, courseCode = null) {
+  const filter = courseCode ? `courseCode=${courseCode}` : 'source=classcalendar-letus';
+  return paginatedCalendarFetch(calId, dates, filter, item => item.id);
 }
 
-async function fetchRegisteredIds(dates, courseCode = null) {
-  const calId = await getCalendarId();
-  const ids = [];
-  let pageToken = null;
-  do {
-    const params = new URLSearchParams({
-      privateExtendedProperty: courseCode ? `courseCode=${courseCode}` : 'source=classcalendar-letus',
-      timeMin: `${dates.start}T00:00:00+09:00`,
-      timeMax: `${dates.end}T23:59:59+09:00`,
-      singleEvents: 'true',
-      maxResults: '250',
-    });
-    if (pageToken) params.set('pageToken', pageToken);
-    const res = await fetch(`${GCAL_BASE}/${calId}/events?${params}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || res.statusText);
-    }
-    const data = await res.json();
-    ids.push(...(data.items || []).map(e => e.id));
-    pageToken = data.nextPageToken || null;
-  } while (pageToken);
-  return ids;
+async function fetchAllCalendarIds(dates, courseCode = null) {
+  const { calendarId: storedId } = await chrome.storage.local.get('calendarId');
+  const [primaryIds, newCalIds] = await Promise.all([
+    fetchFromCalendar('primary', dates, courseCode),
+    storedId
+      ? fetchFromCalendar(storedId, dates, courseCode).catch(e => {
+          showStatus(`CLASS時間割カレンダーの取得に失敗: ${e.message}`, 'warn');
+          return [];
+        })
+      : Promise.resolve([]),
+  ]);
+  const groups = [];
+  if (primaryIds.length) groups.push({ calId: 'primary', ids: primaryIds });
+  if (storedId && newCalIds.length) groups.push({ calId: storedId, ids: newCalIds });
+  return groups;
+}
+
+async function fetchExistingCourseCodes(dates) {
+  const mapFn = item => item.extendedProperties?.private?.courseCode ?? null;
+  const { calendarId: storedId } = await chrome.storage.local.get('calendarId');
+  const [primaryCodes, newCalCodes] = await Promise.all([
+    paginatedCalendarFetch('primary', dates, 'source=classcalendar-letus', mapFn),
+    storedId
+      ? paginatedCalendarFetch(storedId, dates, 'source=classcalendar-letus', mapFn).catch(() => [])
+      : Promise.resolve([]),
+  ]);
+  return new Set([...primaryCodes, ...newCalCodes]);
 }
 
 async function deleteCourse(course, btn) {
@@ -720,13 +705,18 @@ async function deleteCourse(course, btn) {
 
   // 2回目クリック → 確定削除
   if (_courseDeleteBtn === btn) {
-    const ids = _courseDeleteIds;
-    const fromPrimary = _courseDeleteFromPrimary;
+    const groups = _courseDeleteGroups;
     resetCourseDelete(null);
-    const { deleted, partialFail } = await bulkDeleteIds(ids, fromPrimary);
+    let deletedCount = 0, totalCount = 0, anyFail = false;
+    for (const { calId, ids } of groups) {
+      const { deleted, partialFail } = await bulkDeleteIds(ids, calId);
+      deletedCount += deleted;
+      totalCount += ids.length;
+      if (partialFail) anyFail = true;
+    }
     showStatus(
-      partialFail ? `一部削除に失敗しました（${deleted} / ${ids.length}件削除）` : `「${course.name}」の予定を${deleted}件削除しました`,
-      partialFail ? 'warn' : 'ok'
+      anyFail ? `一部削除に失敗しました（${deletedCount} / ${totalCount}件削除）` : `「${course.name}」の予定を${deletedCount}件削除しました`,
+      anyFail ? 'warn' : 'ok'
     );
     return;
   }
@@ -734,26 +724,21 @@ async function deleteCourse(course, btn) {
   // 別ボタンがconfirm中なら先にリセット
   resetCourseDelete(null);
 
-  // 1回目クリック → 件数検索
+  // 1回目クリック → 件数検索（全カレンダー対象）
   showStatus('検索中…', 'ok');
-  let ids;
   try {
-    ids = await fetchRegisteredIds(dates, course.courseCode);
-    if (!ids.length) {
-      ids = await fetchIdsByNames(dates);
-      _courseDeleteFromPrimary = ids.length > 0;
-    }
+    _courseDeleteGroups = await fetchAllCalendarIds(dates, course.courseCode);
   } catch (e) {
     showStatus('取得失敗: ' + e.message, 'error');
     return;
   }
-  if (!ids.length) { showStatus('期間内に削除対象の予定が見つかりません', 'warn'); return; }
+  const totalIds = _courseDeleteGroups.reduce((sum, g) => sum + g.ids.length, 0);
+  if (!totalIds) { showStatus('期間内に削除対象の予定が見つかりません', 'warn'); return; }
 
-  _courseDeleteIds = ids;
   _courseDeleteBtn = btn;
-  btn.textContent = `⚠${ids.length}`;
+  btn.textContent = `⚠${totalIds}`;
   btn.classList.add('confirm');
-  showStatus(`${ids.length}件見つかりました。もう一度押して削除`, 'warn');
+  showStatus(`${totalIds}件見つかりました。もう一度押して削除`, 'warn');
 
   _courseDeleteCancelHandler = e => {
     if (e.target !== btn) resetCourseDelete('キャンセルしました');

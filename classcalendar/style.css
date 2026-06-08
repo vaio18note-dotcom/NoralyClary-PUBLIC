@@ -75,6 +75,19 @@ header h1 { font-size: 14px; font-weight: 600; }
   background: #fff;
 }
 
+/* ---- カレンダー選択 ---- */
+.calendar-section {
+  padding: 8px 14px;
+  border-bottom: 1px solid #e0e0e0;
+}
+.calendar-section .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 /* ---- アクションボタン行 ---- */
 .action-row {
   display: flex;
