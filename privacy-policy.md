@@ -113,7 +113,7 @@ If this policy is updated in a material way, the "Last Updated" date at the top 
 
 For questions or data deletion requests, please contact:
 
-- Email: [m.kobayashi@noraly-clary.com](mailto:m.kobayashi@noraly-clary.com)
+- Email: [class-calendar@noraly-clary.com](mailto:class-calendar@noraly-clary.com)
 - GitHub Issues: [NoralyClary-PUBLIC Issues](https://github.com/vaio18note-dotcom/NoralyClary-PUBLIC/issues)
 
 ---
@@ -229,5 +229,5 @@ Google ユーザーデータは開発者のサーバー、分析サービス、�
 
 ご不明な点やデータ削除のご要望は、以下の方法でご連絡ください。
 
-- メール: [m.kobayashi@noraly-clary.com](mailto:m.kobayashi@noraly-clary.com)
+- メール: [class-calendar@noraly-clary.com](mailto:class-calendar@noraly-clary.com)
 - GitHub Issues: [NoralyClary-PUBLIC Issues](https://github.com/vaio18note-dotcom/NoralyClary-PUBLIC/issues)
