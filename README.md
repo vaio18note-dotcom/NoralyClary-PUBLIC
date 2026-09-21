@@ -106,4 +106,4 @@
 
 ## プライバシーポリシー
 
-[プライバシーポリシーはこちら](privacy-policy.md)
+[プライバシーポリシーはこちら](https://github.noraly-clary.com/privacy-policy)

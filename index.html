@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>CLASS Calendar</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="CLASS Calendar" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://github.noraly-clary.com/" />
+<meta property="og:url" content="https://github.noraly-clary.com/" />
+<meta property="og:site_name" content="CLASS Calendar" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="CLASS Calendar" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","headline":"CLASS Calendar","name":"CLASS Calendar","url":"https://github.noraly-clary.com/"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://github.noraly-clary.com/feed.xml" title="CLASS Calendar" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">CLASS Calendar</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/privacy-policy.html">Privacy Policy — CLASS Calendar</a><a class="page-link" href="/">CLASS Calendar</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <div class="home"><h1 class="page-heading">CLASS Calendar</h1><h1 id="class-calendar">CLASS Calendar</h1>
+
+<p>東京理科大学の CLASS ポータルから時間割を取得し、Google カレンダーに自動登録する Chrome 拡張機能です。</p>
+
+<hr />
+
+<h2 id="対象">対象</h2>
+
+<ul>
+  <li>東京理科大学の学生</li>
+  <li>Google Chrome を使用している方</li>
+</ul>
+
+<hr />
+
+<h2 id="インストール方法">インストール方法</h2>
+
+<h3 id="chrome-web-store-からインストール">Chrome Web Store からインストール</h3>
+
+<p><a href="https://chromewebstore.google.com/detail/kbbcamaakhbnehaimnigjlfngecfflkj">Chrome Web Store のページはこちら</a></p>
+
+<h3 id="手動インストール開発者モード">手動インストール（開発者モード）</h3>
+
+<ol>
+  <li>このリポジトリの <code class="language-plaintext highlighter-rouge">classcalendar</code> フォルダをダウンロードする</li>
+  <li>Chrome で <code class="language-plaintext highlighter-rouge">chrome://extensions/</code> を開く</li>
+  <li>右上の「デベロッパーモード」をオンにする</li>
+  <li>「パッケージ化されていない拡張機能を読み込む」をクリック</li>
+  <li>ダウンロードした <code class="language-plaintext highlighter-rouge">classcalendar</code> フォルダを選択する</li>
+</ol>
+
+<hr />
+
+<h2 id="使い方">使い方</h2>
+
+<h3 id="準備">準備</h3>
+
+<ol>
+  <li>Chrome で <strong>CLASS ポータル</strong> にログインし、学生時間割表を表示する</li>
+  <li>拡張機能アイコンをクリックしてポップアップを開く（時間割は自動で読み込まれます）</li>
+  <li><strong>学期開始日</strong> と <strong>学期終了日</strong> を入力する</li>
+  <li>必要に応じて <strong>カレンダーの色</strong> と <strong>通知タイミング</strong>（何分前に通知するか）を選択する</li>
+</ol>
+
+<hr />
+
+<h3 id="方法agoogle-カレンダーに直接登録する">方法A：Google カレンダーに直接登録する</h3>
+
+<ol>
+  <li>「🔑 Googleログイン」ボタンをクリックし、Google アカウントでログインする</li>
+  <li>登録したい授業の「📅」ボタン、または「📅 月〜金を一括登録」で登録する</li>
+</ol>
+
+<blockquote>
+  <p>すでに同じ授業が登録されている場合は「N件重複する予定があります。もう一度押して続行」と警告が表示されます。そのまま続行する場合はもう一度ボタンを押してください。別の場所をクリックするとキャンセルできます。</p>
+</blockquote>
+
+<p>登録先は Google カレンダー内の <strong>「CLASS時間割」</strong> カレンダー（自動作成）です。</p>
+
+<h3 id="方法bics-ファイルをダウンロードして取り込むログイン不要">方法B：ICS ファイルをダウンロードして取り込む（ログイン不要）</h3>
+
+<ol>
+  <li>「💾」ボタン、または「💾 月〜金を一括DL」でファイルをダウンロードする</li>
+  <li><a href="https://calendar.google.com/">Google カレンダー</a> を開く</li>
+  <li>右上の歯車アイコン →「設定」をクリックする</li>
+  <li>左メニューの「インポート / エクスポート」タブを開く</li>
+  <li>ダウンロードした <code class="language-plaintext highlighter-rouge">.ics</code> ファイルを選択して「インポート」をクリックする</li>
+</ol>
+
+<hr />
+
+<h3 id="特定の授業の予定を削除する">特定の授業の予定を削除する</h3>
+
+<ol>
+  <li>Google ログイン後、学期開始日・終了日を設定する</li>
+  <li>削除したい授業カードの「🗑」ボタンをクリックする</li>
+  <li>「N件見つかりました。もう一度押して削除」と表示されたら、もう一度「🗑」を押して確定する</li>
+</ol>
+
+<blockquote>
+  <p>別の場所をクリックするとキャンセルできます。</p>
+</blockquote>
+
+<hr />
+
+<h3 id="登録した予定をすべてまとめて削除する">登録した予定をすべてまとめて削除する</h3>
+
+<ol>
+  <li>Google ログイン後、学期開始日・終了日を設定する</li>
+  <li>「🗑 登録済み予定を削除」ボタンをクリックする</li>
+  <li>「N件見つかりました。もう一度押して削除」と表示されたら、もう一度クリックして確定する</li>
+</ol>
+
+<blockquote>
+  <p>別の場所をクリックするとキャンセルできます。
+この拡張機能で登録した予定のみが削除対象になります。手動で追加した予定は削除されません。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="登録される予定の内容">登録される予定の内容</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>項目</th>
+      <th>内容</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>タイトル</td>
+      <td>授業名</td>
+    </tr>
+    <tr>
+      <td>場所</td>
+      <td>教室名</td>
+    </tr>
+    <tr>
+      <td>色</td>
+      <td>選択したカレンダーの色（未選択時はデフォルト）</td>
+    </tr>
+    <tr>
+      <td>通知</td>
+      <td>設定した分前に Google カレンダーの通知（デフォルト: 10分前、ICS にも反映）※土曜授業は通知なし</td>
+    </tr>
+    <tr>
+      <td>繰り返し</td>
+      <td>毎週（学期終了日まで）</td>
+    </tr>
+    <tr>
+      <td>月〜金の授業</td>
+      <td>時限ごとの時間帯で登録</td>
+    </tr>
+    <tr>
+      <td>土曜の授業</td>
+      <td>終日予定で登録</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="時限と時間帯">時限と時間帯</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>時限</th>
+      <th>時間</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1 限</td>
+      <td>8:50 〜 10:20</td>
+    </tr>
+    <tr>
+      <td>2 限</td>
+      <td>10:30 〜 12:00</td>
+    </tr>
+    <tr>
+      <td>3 限</td>
+      <td>13:00 〜 14:30</td>
+    </tr>
+    <tr>
+      <td>4 限</td>
+      <td>14:40 〜 16:10</td>
+    </tr>
+    <tr>
+      <td>5 限</td>
+      <td>16:20 〜 17:50</td>
+    </tr>
+    <tr>
+      <td>6 限</td>
+      <td>18:10 〜 19:40</td>
+    </tr>
+    <tr>
+      <td>7 限</td>
+      <td>19:50 〜 21:20</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="プライバシーポリシー">プライバシーポリシー</h2>
+
+<p><a href="/privacy-policy.html">プライバシーポリシーはこちら</a></p>
+</div>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">CLASS Calendar</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">CLASS Calendar</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p></p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
