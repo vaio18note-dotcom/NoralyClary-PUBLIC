@@ -1,2 +1,4 @@
 theme: minima
 title: CLASS Calendar
+include:
+  - .htaccess
