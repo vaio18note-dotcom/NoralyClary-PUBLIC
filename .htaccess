@@ -1,4 +1,8 @@
-# GitHub Pages から Xserver へ移設（2026-09-21）。
+# GitHub Pages から Xserver へ移設（2026-09-21）。このディレクトリは git clone で、更新は git pull。
+
+# .git / .gitattributes などを Web に出さない
+RedirectMatch 404 /\.git
+
 # Pages は拡張子なしの /privacy-policy でも配信していた。Chrome ウェブストアと
 # Google OAuth 同意画面に登録済みの URL を壊さないよう、両方の形で受ける。
 <IfModule mod_rewrite.c>

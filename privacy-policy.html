@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Privacy Policy — CLASS Calendar | CLASS Calendar</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Privacy Policy — CLASS Calendar" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="https://github.noraly-clary.com/privacy-policy.html" />
+<meta property="og:url" content="https://github.noraly-clary.com/privacy-policy.html" />
+<meta property="og:site_name" content="CLASS Calendar" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Privacy Policy — CLASS Calendar" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Privacy Policy — CLASS Calendar","url":"https://github.noraly-clary.com/privacy-policy.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://github.noraly-clary.com/feed.xml" title="CLASS Calendar" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">CLASS Calendar</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/privacy-policy.html">Privacy Policy — CLASS Calendar</a><a class="page-link" href="/">CLASS Calendar</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <p>Last Updated: May 30, 2026 / 最終更新日: 2026年5月30日</p>
+
+<hr />
+
+<h2 id="english">English</h2>
+
+<h3 id="overview">Overview</h3>
+
+<p>CLASS Calendar is a Chrome extension that retrieves timetable data from Tokyo University of Science’s CLASS portal and registers the schedule as events in the user’s Google Calendar.</p>
+
+<p>This privacy policy explains how the extension handles Google user data in compliance with the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>.</p>
+
+<hr />
+
+<h3 id="1-data-accessed">1. Data Accessed</h3>
+
+<p>The extension requests the following Google OAuth 2.0 scope:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Scope</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">https://www.googleapis.com/auth/calendar</code></td>
+      <td>Creating, reading, and deleting calendar events and calendars</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Specific Google user data accessed:</strong></p>
+
+<ul>
+  <li><strong>Calendar list</strong> — To check whether a calendar named “CLASS時間割” already exists, avoiding duplicate creation.</li>
+  <li><strong>Events within the “CLASS時間割” calendar only</strong> — To check for duplicate events before registration and to delete previously registered events when the user requests removal.</li>
+</ul>
+
+<p>The extension does <strong>not</strong> access, read, or store any data from calendars or events other than those it creates in “CLASS時間割”.</p>
+
+<hr />
+
+<h3 id="2-data-usage">2. Data Usage</h3>
+
+<p>Google user data is used <strong>solely</strong> for the following purposes:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Operation</th>
+      <th>Google Data Used</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Calendar creation</td>
+      <td>Calendar list</td>
+      <td>Create “CLASS時間割” calendar if it does not already exist</td>
+    </tr>
+    <tr>
+      <td>Event registration</td>
+      <td>Events in “CLASS時間割”</td>
+      <td>Register timetable events; check for duplicates before inserting</td>
+    </tr>
+    <tr>
+      <td>Event deletion</td>
+      <td>Events in “CLASS時間割”</td>
+      <td>Delete previously registered events at the user’s explicit request</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The extension does <strong>not</strong> use Google user data for:</p>
+
+<ul>
+  <li>Advertising or analytics</li>
+  <li>Training AI/ML models</li>
+  <li>Sharing with or selling to third parties</li>
+  <li>Any purpose beyond the core calendar-sync functionality described above</li>
+</ul>
+
+<hr />
+
+<h3 id="3-data-sharing">3. Data Sharing</h3>
+
+<p><strong>The extension does not share any Google user data with third parties.</strong></p>
+
+<p>Google user data is never transferred to the developer’s servers, analytics services, advertising networks, or any other external service. The only network requests made by the extension are:</p>
+
+<ul>
+  <li><strong>Google Calendar API</strong> (<code class="language-plaintext highlighter-rouge">googleapis.com</code>) — To perform the calendar operations described in Section 2.</li>
+  <li><strong>CLASS portal</strong> (<code class="language-plaintext highlighter-rouge">class.admin.tus.ac.jp</code>) — To fetch the user’s timetable data. No Google user data is sent to this server.</li>
+</ul>
+
+<hr />
+
+<h3 id="4-data-storage--protection">4. Data Storage &amp; Protection</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Data</th>
+      <th>Storage Location</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Google OAuth access token</td>
+      <td>Browser memory only</td>
+      <td>Cleared when popup is closed; never written to disk or any server</td>
+    </tr>
+    <tr>
+      <td>Timetable data (course name, classroom, period)</td>
+      <td>Browser memory only</td>
+      <td>Cleared when popup is closed</td>
+    </tr>
+    <tr>
+      <td>“CLASS時間割” calendar ID</td>
+      <td>Chrome <code class="language-plaintext highlighter-rouge">localStorage</code> (device-local only)</td>
+      <td>Never sent to external servers</td>
+    </tr>
+    <tr>
+      <td>Semester start/end dates</td>
+      <td>Chrome <code class="language-plaintext highlighter-rouge">localStorage</code> (device-local only)</td>
+      <td>Saved for user convenience; never sent externally</td>
+    </tr>
+    <tr>
+      <td>Event color and notification settings</td>
+      <td>Chrome <code class="language-plaintext highlighter-rouge">localStorage</code> (device-local only)</td>
+      <td>Saved for user convenience; never sent externally</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The developer operates <strong>no external servers</strong> that store or process Google user data. All Google user data remains on the user’s device and is transmitted only to Google’s own APIs over HTTPS.</p>
+
+<hr />
+
+<h3 id="5-data-retention--deletion">5. Data Retention &amp; Deletion</h3>
+
+<h4 id="retention">Retention</h4>
+
+<ul>
+  <li><strong>OAuth access token</strong>: Retained in browser memory only while the popup is open. Automatically cleared when the popup is closed.</li>
+  <li><strong>Timetable data</strong>: Retained in browser memory only while the popup is open.</li>
+  <li><strong>Device-local settings</strong>: Retained in <code class="language-plaintext highlighter-rouge">localStorage</code> until the extension is uninstalled or the user manually clears browser storage.</li>
+</ul>
+
+<h4 id="deletion">Deletion</h4>
+
+<p>Users can delete their data at any time through the following methods:</p>
+
+<ol>
+  <li><strong>Revoke Google account access</strong> — Visit <a href="https://myaccount.google.com/permissions">Google Account Permissions</a> and remove “CLASS Calendar”. This immediately revokes the OAuth token.</li>
+  <li><strong>Delete registered events</strong> — Use the extension’s built-in deletion feature to remove all events from the “CLASS時間割” calendar.</li>
+  <li><strong>Delete the calendar</strong> — Remove the “CLASS時間割” calendar directly from Google Calendar to delete all associated events.</li>
+  <li><strong>Uninstall the extension</strong> — All <code class="language-plaintext highlighter-rouge">localStorage</code> data is removed automatically upon uninstallation.</li>
+</ol>
+
+<hr />
+
+<h3 id="6-google-api-services">6. Google API Services</h3>
+
+<p>CLASS Calendar’s use of Google Calendar data is limited to the purposes described in this policy and complies with the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+
+<hr />
+
+<h3 id="7-changes-to-this-policy">7. Changes to This Policy</h3>
+
+<p>If this policy is updated in a material way, the “Last Updated” date at the top of this page will be revised. Continued use of the extension after a policy update constitutes acceptance of the revised policy.</p>
+
+<hr />
+
+<h3 id="8-contact">8. Contact</h3>
+
+<p>For questions or data deletion requests, please contact:</p>
+
+<ul>
+  <li>Email: <a href="mailto:class-calendar@noraly-clary.com">class-calendar@noraly-clary.com</a></li>
+  <li>GitHub Issues: <a href="https://github.com/vaio18note-dotcom/NoralyClary-PUBLIC/issues">NoralyClary-PUBLIC Issues</a></li>
+</ul>
+
+<hr />
+<hr />
+
+<h2 id="日本語">日本語</h2>
+
+<h3 id="概要">概要</h3>
+
+<p>CLASS Calendar は、東京理科大学の CLASS ポータルから時間割データを取得し、ユーザーの Google カレンダーにイベントとして登録する Chrome 拡張機能です。</p>
+
+<p>本プライバシーポリシーは、<a href="https://developers.google.com/terms/api-services-user-data-policy">Google API サービスユーザーデータポリシー</a>に準拠し、Google ユーザーデータの取り扱いを説明します。</p>
+
+<hr />
+
+<h3 id="1-アクセスするデータ">1. アクセスするデータ</h3>
+
+<p>本拡張機能は以下の Google OAuth 2.0 スコープを要求します。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>スコープ</th>
+      <th>目的</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">https://www.googleapis.com/auth/calendar</code></td>
+      <td>カレンダー・イベントの作成・読み取り・削除</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>アクセスする具体的な Google ユーザーデータ:</strong></p>
+
+<ul>
+  <li><strong>カレンダー一覧</strong> — 「CLASS時間割」カレンダーの重複作成を防ぐために確認します。</li>
+  <li><strong>「CLASS時間割」カレンダー内のイベントのみ</strong> — 登録前の重複確認、およびユーザーが削除操作を行う際に使用します。</li>
+</ul>
+
+<p>本拡張機能は「CLASS時間割」以外のカレンダーやイベントの内容を取得・閲覧・保存しません。</p>
+
+<hr />
+
+<h3 id="2-データの使用目的">2. データの使用目的</h3>
+
+<p>Google ユーザーデータは、以下の目的<strong>のみ</strong>に使用されます。</p>
+
+<!-- markdownlint-disable MD060 -->
+<p>| 操作 | 使用するGoogleデータ | 目的 |
+|——|———————|——|
+| カレンダー作成 | カレンダー一覧 | 「CLASS時間割」が存在しない場合に初回作成 |
+| イベント登録 | 「CLASS時間割」内のイベント | 時間割イベントの登録・登録前の重複確認 |
+| イベント削除 | 「CLASS時間割」内のイベント | ユーザーの明示的な操作による登録済みイベントの削除 |
+<!-- markdownlint-enable MD060 --></p>
+
+<p>Google ユーザーデータは以下の目的には<strong>一切使用しません</strong>。</p>
+
+<ul>
+  <li>広告または分析</li>
+  <li>AI/ML モデルの学習</li>
+  <li>第三者への共有または販売</li>
+  <li>上記のカレンダー同期機能以外のあらゆる目的</li>
+</ul>
+
+<hr />
+
+<h3 id="3-データの共有">3. データの共有</h3>
+
+<p><strong>本拡張機能は、いかなる第三者にも Google ユーザーデータを共有しません。</strong></p>
+
+<p>Google ユーザーデータは開発者のサーバー、分析サービス、広告ネットワーク、その他の外部サービスには一切送信されません。本拡張機能が行う外部への通信は以下の2つのみです。</p>
+
+<ul>
+  <li><strong>Google カレンダー API</strong>（<code class="language-plaintext highlighter-rouge">googleapis.com</code>）— 第2節に記載のカレンダー操作のため</li>
+  <li><strong>CLASS ポータル</strong>（<code class="language-plaintext highlighter-rouge">class.admin.tus.ac.jp</code>）— 時間割データの取得のため（ここには Google ユーザーデータは送信されません）</li>
+</ul>
+
+<hr />
+
+<h3 id="4-データの保存とセキュリティ">4. データの保存とセキュリティ</h3>
+
+<!-- markdownlint-disable MD060 -->
+<p>| データ | 保存場所 | 備考 |
+|——–|———-|——|
+| Google OAuth アクセストークン | ブラウザのメモリのみ | ポップアップを閉じると消去。ディスクや外部サーバーには保存しない |
+| 時間割データ（授業名・教室・時限） | ブラウザのメモリのみ | ポップアップを閉じると消去 |
+| 「CLASS時間割」カレンダーの ID | Chrome <code class="language-plaintext highlighter-rouge">localStorage</code>（端末内のみ） | 外部サーバーには送信しない |
+| 学期の開始日・終了日 | Chrome <code class="language-plaintext highlighter-rouge">localStorage</code>（端末内のみ） | 入力省略のために保存。外部には送信しない |
+| イベントの色・通知タイミング設定 | Chrome <code class="language-plaintext highlighter-rouge">localStorage</code>（端末内のみ） | 設定復元のために保存。外部には送信しない |
+<!-- markdownlint-enable MD060 --></p>
+
+<p>開発者は Google ユーザーデータを保存・処理する<strong>外部サーバーを一切運営しておりません</strong>。すべての Google ユーザーデータはユーザーの端末上にのみ存在し、HTTPS 経由で Google 自身の API にのみ送信されます。</p>
+
+<hr />
+
+<h3 id="5-データの保持と削除">5. データの保持と削除</h3>
+
+<h4 id="保持期間">保持期間</h4>
+
+<ul>
+  <li><strong>OAuth アクセストークン</strong>: ポップアップが開いている間のみブラウザのメモリに保持。ポップアップを閉じると自動的に消去されます。</li>
+  <li><strong>時間割データ</strong>: ポップアップが開いている間のみブラウザのメモリに保持。</li>
+  <li><strong>端末内設定</strong>: 拡張機能のアンインストール、またはユーザーが手動でブラウザストレージを削除するまで <code class="language-plaintext highlighter-rouge">localStorage</code> に保持されます。</li>
+</ul>
+
+<h4 id="削除方法">削除方法</h4>
+
+<p>ユーザーはいつでも以下の方法でデータを削除できます。</p>
+
+<ol>
+  <li><strong>Google アカウントのアクセスを取り消す</strong> — <a href="https://myaccount.google.com/permissions">Google アカウントの権限ページ</a> から「CLASS Calendar」を削除（OAuth トークンを即時失効）</li>
+  <li><strong>登録済みイベントを削除する</strong> — 拡張機能の削除機能を使い、「CLASS時間割」カレンダーのすべてのイベントを削除</li>
+  <li><strong>カレンダーを削除する</strong> — Google カレンダーから「CLASS時間割」カレンダーを直接削除</li>
+  <li><strong>拡張機能をアンインストールする</strong> — Chrome 拡張機能を削除すると、<code class="language-plaintext highlighter-rouge">localStorage</code> のデータが自動的に消去されます</li>
+</ol>
+
+<hr />
+
+<h3 id="6-google-api-サービスの利用">6. Google API サービスの利用</h3>
+
+<p>本拡張機能の Google カレンダーデータの利用は、本ポリシーに記載された目的に限定され、Limited Use 要件を含む <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API サービスユーザーデータポリシー</a>に準拠しています。</p>
+
+<hr />
+
+<h3 id="7-ポリシーの変更">7. ポリシーの変更</h3>
+
+<p>本ポリシーに重要な変更を行う場合は、ページ上部の「最終更新日」を改訂します。変更後も引き続き本拡張機能をご利用いただくことで、改訂後のポリシーに同意したものとみなします。</p>
+
+<hr />
+
+<h3 id="8-お問い合わせ">8. お問い合わせ</h3>
+
+<p>ご不明な点やデータ削除のご要望は、以下の方法でご連絡ください。</p>
+
+<ul>
+  <li>メール: <a href="mailto:class-calendar@noraly-clary.com">class-calendar@noraly-clary.com</a></li>
+  <li>GitHub Issues: <a href="https://github.com/vaio18note-dotcom/NoralyClary-PUBLIC/issues">NoralyClary-PUBLIC Issues</a></li>
+</ul>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">CLASS Calendar</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">CLASS Calendar</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p></p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
